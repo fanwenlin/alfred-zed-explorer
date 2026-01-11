@@ -57,6 +57,7 @@ package: release
 	# Copy built binaries
 	@cp "$(TARGET_DIR)/zed-search" "$(OUTPUT_DIR)/$(WORKFLOW_NAME)/"
 	@cp "$(TARGET_DIR)/zed-recent" "$(OUTPUT_DIR)/$(WORKFLOW_NAME)/"
+	@cp "$(TARGET_DIR)/zed" "$(OUTPUT_DIR)/$(WORKFLOW_NAME)/"
 
 	# Copy info.plist and icon.png
 	@cp info.plist "$(OUTPUT_DIR)/$(WORKFLOW_NAME)/"
@@ -88,6 +89,7 @@ install-local: release
 	\
 	cp $(TARGET_DIR)/zed-search "$$TARGET_WORKFLOW_DIR/"; \
 	cp $(TARGET_DIR)/zed-recent "$$TARGET_WORKFLOW_DIR/"; \
+	cp $(TARGET_DIR)/zed "$$TARGET_WORKFLOW_DIR/"; \
 	cp info.plist "$$TARGET_WORKFLOW_DIR/"; \
 	if [ -f "icon.png" ]; then cp "icon.png" "$$TARGET_WORKFLOW_DIR/"; fi; \
 	\
@@ -98,6 +100,7 @@ install-local: release
 	echo "To use:"; \
 	echo "  • Type 'zopen <query>' to search projects"; \
 	echo "  • Type 'zrecent <query>' to search recent projects"; \
+	echo "  • Type 'zed <query>' to search both recent and directory projects"; \
 	echo "  • Configure PROJECT_DIRS in Alfred workflow settings"
 
 # Clean build artifacts

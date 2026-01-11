@@ -34,6 +34,19 @@
 				<false/>
 			</dict>
 		</array>
+		<key>7E9D4C5B-1F2A-3G3B-H4C9-5D8C7F6B5E4A</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>D4F5A6B7-8E9C-4D1F-B2E1-F6C9D0A3B4E5</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
 	</dict>
 	<key>createdby</key>
 	<string>OpenInZed</string>
@@ -89,6 +102,53 @@
 			<string>alfred.workflow.input.scriptfilter</string>
 			<key>uid</key>
 			<string>0494F58B-1D33-45AD-BD90-2E4C0DB4D6E2</string>
+			<key>version</key>
+			<integer>3</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>alfredfiltersresults</key>
+				<false/>
+				<key>alfredfiltersresultsmatchmode</key>
+				<integer>0</integer>
+				<key>argumenttrimmode</key>
+				<integer>0</integer>
+				<key>argumenttype</key>
+				<integer>1</integer>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>keyword</key>
+				<string>zed</string>
+				<key>queuedelaycustom</key>
+				<integer>3</integer>
+				<key>queuedelayimmediatelyinitially</key>
+				<true/>
+				<key>queuedelaymode</key>
+				<integer>0</integer>
+				<key>queuemode</key>
+				<integer>1</integer>
+				<key>runningsubtext</key>
+				<string>Searching recent and directory projects...</string>
+				<key>script</key>
+				<string>./zed '{query}'</string>
+				<key>scriptargtype</key>
+				<integer>0</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>subtext</key>
+				<string>Search recent and custom directory projects</string>
+				<key>title</key>
+				<string>OpenInZed - Unified Search</string>
+				<key>type</key>
+				<integer>0</integer>
+				<key>withspace</key>
+				<true/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.scriptfilter</string>
+			<key>uid</key>
+			<string>7E9D4C5B-1F2A-3G3B-H4C9-5D8C7F6B5E4A</string>
 			<key>version</key>
 			<integer>3</integer>
 		</dict>
@@ -165,6 +225,13 @@
 			<integer>70</integer>
 			<key>ypos</key>
 			<integer>70</integer>
+		</dict>
+		<key>7E9D4C5B-1F2A-3G3B-H4C9-5D8C7F6B5E4A</key>
+		<dict>
+			<key>xpos</key>
+			<integer>70</integer>
+			<key>ypos</key>
+			<integer>330</integer>
 		</dict>
 		<key>5C8D3F4A-9E2B-4F1C-A9D8-3C7B5E6A2F1C</key>
 		<dict>

@@ -41,6 +41,7 @@ jobs:
           mkdir -p "$STAGE_DIR"
           cp target/release/zed-search "$STAGE_DIR/"
           cp target/release/zed-recent "$STAGE_DIR/"
+          cp target/release/zed "$STAGE_DIR/"
           cp info.plist "$STAGE_DIR/"
           if [ -f icon.png ]; then cp icon.png "$STAGE_DIR/"; fi
 

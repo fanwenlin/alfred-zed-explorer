@@ -19,6 +19,10 @@ path = "src/bin/recent.rs"
 name = "debug-zed-db"
 path = "src/bin/debug.rs"
 
+[[bin]]
+name = "zed"
+path = "src/bin/zed.rs"
+
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
