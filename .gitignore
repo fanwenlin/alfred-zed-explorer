@@ -1,0 +1,7 @@
+/target/
+/output/
+/dist/
+/*.alfredworkflow/
+.DS_Store
+.idea/
+.vscode/
