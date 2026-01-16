@@ -9,7 +9,19 @@ use zed_workspace_explorer::{
 };
 
 fn main() -> Result<()> {
-    let query = env::args().nth(1).unwrap_or_default();
+    let args: Vec<String> = env::args().collect();
+    let mut remote_only = false;
+    let mut query = String::new();
+
+    // Parse arguments
+    for arg in args.iter().skip(1) {
+        if arg == "--remote-only" || arg == "-r" {
+            remote_only = true;
+        } else if !arg.starts_with('-') {
+            query = arg.clone();
+        }
+    }
+
     let matcher = SkimMatcherV2::default();
 
     let mut output = AlfredOutput::new();
@@ -19,13 +31,19 @@ fn main() -> Result<()> {
     let mut has_recent = false;
     match get_recent_projects() {
         Ok(recent_projects) => {
-            // Filter recent projects by query
-            let filtered_recent: Vec<_> = if query.is_empty() {
-                recent_projects
-            } else {
-                recent_projects
-                    .into_iter()
-                    .filter(|project| {
+            // Filter recent projects by remote_only and query
+            let filtered_recent: Vec<_> = recent_projects
+                .into_iter()
+                .filter(|project| {
+                    // Filter by remote_only flag
+                    if remote_only && project.remote_info.is_none() {
+                        return false;
+                    }
+
+                    // Filter by query
+                    if query.is_empty() {
+                        true
+                    } else {
                         let name = project
                             .path
                             .file_name()
@@ -35,9 +53,9 @@ fn main() -> Result<()> {
                             matcher.fuzzy_match(&project.path.to_string_lossy(), &query)
                         });
                         score.is_some()
-                    })
-                    .collect()
-            };
+                    }
+                })
+                .collect();
 
             // Add filtered recent projects (up to 50)
             if !filtered_recent.is_empty() {
@@ -66,10 +84,18 @@ fn main() -> Result<()> {
                         String::new()
                     };
 
+                    // Add remote indicator
+                    let remote_indicator = if let Some(remote) = &project.remote_info {
+                        let host = remote.host.as_deref().unwrap_or("remote");
+                        format!("🌐 {} ", host)
+                    } else {
+                        String::new()
+                    };
+
                     output.add_item(AlfredItem {
                         uid: path.to_string(),
                         item_type: "file".to_string(),
-                        title: format!("{} {}{}", icon, name, timestamp_text),
+                        title: format!("{}{}{}{}", remote_indicator, icon, name, timestamp_text),
                         subtitle: path.to_string(),
                         arg: path.to_string(),
                         autocomplete: name.to_string(),
@@ -86,32 +112,37 @@ fn main() -> Result<()> {
         }
     }
 
-    // Step 2: Scan custom directories for additional projects
-    let dirs = get_project_directories();
-    let all_dir_projects = detect_projects(&dirs, 2)?; // 2 levels deep like zrecent
-
-    // Filter out projects that already appear in recent list
-    let filtered_dir_projects: Vec<_> = all_dir_projects
-        .into_iter()
-        .filter(|project| {
-            let path_str = project.path.to_string_lossy().to_string();
-            !recent_paths_set.contains(&path_str)
-        })
-        .collect();
-
-    // Step 3: Apply query filter to directory projects
-    let query_filtered_dir: Vec<_> = if query.is_empty() {
-        filtered_dir_projects
+    // Step 2: Scan custom directories for additional projects (only if not remote-only)
+    let query_filtered_dir = if remote_only {
+        // Skip directory scan for remote-only mode
+        Vec::new()
     } else {
-        filtered_dir_projects
+        let dirs = get_project_directories();
+        let all_dir_projects = detect_projects(&dirs, 2)?; // 2 levels deep like zrecent
+
+        // Filter out projects that already appear in recent list
+        let filtered_dir_projects: Vec<_> = all_dir_projects
             .into_iter()
             .filter(|project| {
-                let score = matcher
-                    .fuzzy_match(&project.name, &query)
-                    .or_else(|| matcher.fuzzy_match(&project.path.to_string_lossy(), &query));
-                score.is_some()
+                let path_str = project.path.to_string_lossy().to_string();
+                !recent_paths_set.contains(&path_str)
             })
-            .collect()
+            .collect();
+
+        // Step 3: Apply query filter to directory projects
+        if query.is_empty() {
+            filtered_dir_projects
+        } else {
+            filtered_dir_projects
+                .into_iter()
+                .filter(|project| {
+                    let score = matcher
+                        .fuzzy_match(&project.name, &query)
+                        .or_else(|| matcher.fuzzy_match(&project.path.to_string_lossy(), &query));
+                    score.is_some()
+                })
+                .collect()
+        }
     };
 
     // Step 4: Add separator if we have both recent and directory results
@@ -153,7 +184,19 @@ fn main() -> Result<()> {
 
     // Step 6: Handle empty results
     if output.items.is_empty() {
-        if query.is_empty() {
+        if remote_only {
+            if query.is_empty() {
+                output.add_no_results(
+                    "No remote projects found",
+                    "Open remote projects in Zed using SSH or dev server",
+                );
+            } else {
+                output.add_no_results(
+                    "No remote projects match your search",
+                    "Try a different search term",
+                );
+            }
+        } else if query.is_empty() {
             output.add_no_results(
                 "No projects found",
                 "Open projects in Zed or add directories to PROJECT_DIRS",

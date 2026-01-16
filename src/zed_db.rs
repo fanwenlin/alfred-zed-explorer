@@ -9,6 +9,14 @@ const KV_TABLE_NAME: &str = "kv_store"; // Zed uses 'kv_store', not 'kv'
 pub struct ZedRecentProject {
     pub path: PathBuf,
     pub timestamp: Option<i64>,
+    pub remote_info: Option<RemoteInfo>,
+}
+
+#[derive(Debug, Clone)]
+pub struct RemoteInfo {
+    pub connection_id: i64,
+    pub kind: String,
+    pub host: Option<String>,
 }
 
 pub fn get_zed_config_dir() -> Result<PathBuf> {
@@ -99,7 +107,15 @@ pub fn get_recent_projects() -> Result<Vec<ZedRecentProject>> {
             Ok(mut projects) => {
                 for project in projects.drain(..) {
                     let path_str = project.path.to_string_lossy().to_string();
-                    if !seen_paths.contains(&path_str) && project.path.exists() {
+
+                    // Skip duplicate paths
+                    if seen_paths.contains(&path_str) {
+                        continue;
+                    }
+
+                    // For local projects, check if path exists
+                    // For remote projects, always include them (we can't check remote path existence)
+                    if project.remote_info.is_some() || project.path.exists() {
                         seen_paths.insert(path_str);
                         all_projects.push(project);
                     }
@@ -142,40 +158,73 @@ fn get_recent_projects_from_db(db_path: &Path) -> Result<Vec<ZedRecentProject>> 
 }
 
 fn get_recent_projects_from_workspaces(conn: &Connection) -> Result<Vec<ZedRecentProject>> {
+    // First, fetch all remote connections to build a lookup map
+    let mut remote_conn_map = std::collections::HashMap::new();
+    let mut stmt = conn.prepare("SELECT id, kind, host FROM remote_connections")?;
+    let remote_connections = stmt.query_map([], |row| {
+        let id: i64 = row.get(0)?;
+        let kind: String = row.get(1)?;
+        let host: Option<String> = row.get(2)?;
+        Ok((id, kind, host))
+    })?;
+
+    for conn_result in remote_connections {
+        if let Ok((id, kind, host)) = conn_result {
+            remote_conn_map.insert(id, RemoteInfo {
+                connection_id: id,
+                kind,
+                host,
+            });
+        }
+    }
+
     // Query the workspaces table
-    let mut stmt =
-        conn.prepare("SELECT paths, timestamp FROM workspaces ORDER BY timestamp DESC")?;
+    let mut stmt = conn.prepare(
+        "SELECT paths, timestamp, remote_connection_id FROM workspaces ORDER BY timestamp DESC"
+    )?;
 
     let projects = stmt.query_map([], |row| {
         let paths_str: String = row.get(0)?;
         let timestamp_str: String = row.get(1)?;
+        let remote_connection_id: Option<i64> = row.get(2)?;
 
         // Parse timestamp (format: "YYYY-MM-DD HH:MM:SS")
         let timestamp = chrono::NaiveDateTime::parse_from_str(&timestamp_str, "%Y-%m-%d %H:%M:%S")
             .ok()
             .map(|dt| dt.and_utc().timestamp());
 
-        Ok((paths_str, timestamp))
+        Ok((paths_str, timestamp, remote_connection_id))
     })?;
 
     let mut recent_projects = Vec::new();
     let mut seen_paths = std::collections::HashSet::new();
 
     for project_result in projects.flatten() {
-        let (paths_str, timestamp) = project_result;
+        let (paths_str, timestamp, remote_connection_id) = project_result;
+
+        // Get remote info if available
+        let remote_info = remote_connection_id.and_then(|conn_id| remote_conn_map.get(&conn_id).cloned());
+
         // Split paths by | and handle each path
         for path in paths_str.split('|') {
             let path = path.trim();
             if !path.is_empty() {
                 // Skip if we've already seen this path
-                if seen_paths.contains(path) {
+                let path_key = if remote_info.is_some() {
+                    format!("remote:{}: {}", remote_connection_id.unwrap_or(0), path)
+                } else {
+                    path.to_string()
+                };
+
+                if seen_paths.contains(&path_key) {
                     continue;
                 }
-                seen_paths.insert(path.to_string());
+                seen_paths.insert(path_key);
 
                 recent_projects.push(ZedRecentProject {
                     path: PathBuf::from(path),
                     timestamp,
+                    remote_info: remote_info.clone(),
                 });
             }
         }
@@ -225,7 +274,8 @@ fn parse_recent_projects_json(json_str: &str) -> Result<Vec<ZedRecentProject>> {
 
                     let timestamp = obj.get("timestamp").and_then(|v| v.as_i64());
 
-                    projects.push(ZedRecentProject { path, timestamp });
+                    // KV store doesn't have remote info, so set it to None
+                    projects.push(ZedRecentProject { path, timestamp, remote_info: None });
                 }
             }
         }

@@ -77,10 +77,19 @@ fn main() -> Result<()> {
                         String::new()
                     };
 
+                    // Add remote indicator
+                    let remote_indicator = if let Some(remote) = &project.remote_info {
+                        let host = remote.host.as_deref().unwrap_or("remote");
+                        format!("🌐 [{}] ", host)
+                    } else {
+                        String::new()
+                    };
+
                     println!(
-                        "{}. {} {}{}",
+                        "{}. {} {}{}{}",
                         i + 1,
                         exists,
+                        remote_indicator,
                         project.path.display(),
                         timestamp
                     );
