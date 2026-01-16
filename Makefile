@@ -79,20 +79,29 @@ package: release
 install-local: release
 	@echo "🔧 Installing locally for testing..."
 
-	# Find Alfred workflows directory
 	@WORKFLOWS_DIR="$$HOME/Library/Application Support/Alfred/Alfred.alfredpreferences/workflows"; \
 	UUID=$$(uuidgen | tr '[:upper:]' '[:lower:]'); \
 	TARGET_WORKFLOW_DIR="$$WORKFLOWS_DIR/com.fwl.openinzed.$$UUID"; \
-	\
+	echo "🧹 Cleaning up existing OpenInZed workflows..."; \
+	if [ -d "$$WORKFLOWS_DIR" ]; then \
+		find "$$WORKFLOWS_DIR" -maxdepth 1 -type d -name 'com.fwl.openinzed.*' 2>/dev/null | while IFS= read -r dir; do \
+			if [ -n "$$dir" ]; then \
+				echo "   Removing: $$dir"; \
+				rm -rf "$$dir"; \
+			fi; \
+		done; \
+		echo "   ✅ Cleanup complete"; \
+	else \
+		echo "   No existing workflow found"; \
+	fi; \
+	echo ""; \
 	echo "📁 Installing to: $$TARGET_WORKFLOW_DIR"; \
 	mkdir -p "$$TARGET_WORKFLOW_DIR"; \
-	\
 	cp $(TARGET_DIR)/zed-search "$$TARGET_WORKFLOW_DIR/"; \
 	cp $(TARGET_DIR)/zed-recent "$$TARGET_WORKFLOW_DIR/"; \
 	cp $(TARGET_DIR)/zed "$$TARGET_WORKFLOW_DIR/"; \
 	cp info.plist "$$TARGET_WORKFLOW_DIR/"; \
 	if [ -f "icon.png" ]; then cp "icon.png" "$$TARGET_WORKFLOW_DIR/"; fi; \
-	\
 	echo ""; \
 	echo "✅ Local installation complete!"; \
 	echo "🔑 Workflow installed with UUID: $$UUID"; \
