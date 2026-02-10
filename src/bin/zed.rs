@@ -18,7 +18,7 @@ fn main() -> Result<()> {
         if arg == "--remote-only" || arg == "-r" {
             remote_only = true;
         } else if !arg.starts_with('-') {
-            query = arg.clone();
+            query.clone_from(arg);
         }
     }
 
@@ -63,9 +63,13 @@ fn main() -> Result<()> {
                 for project in filtered_recent.iter().take(50) {
                     // Track all recent paths for deduplication
                     let path_str = project.path.to_string_lossy().to_string();
-                    recent_paths_set.insert(path_str.clone());
 
-                    let icon = zed_workspace_explorer::get_icon_for_project(&project.path);
+                    let is_remote = project.remote_info.is_some();
+                    let icon = if is_remote {
+                        "💻"
+                    } else {
+                        zed_workspace_explorer::get_icon_for_project(&project.path)
+                    };
                     let name = project
                         .path
                         .file_name()
@@ -84,24 +88,34 @@ fn main() -> Result<()> {
                         String::new()
                     };
 
-                    // Add remote indicator
-                    let remote_indicator = if let Some(remote) = &project.remote_info {
+                    // Build arg and title based on whether it's remote
+                    let (arg, remote_indicator, subtitle, uid) = if let Some(remote) =
+                        &project.remote_info
+                    {
                         let host = remote.host.as_deref().unwrap_or("remote");
-                        format!("🌐 {} ", host)
+                        let ssh_arg = format!("ssh://{}/{}", host, path.trim_start_matches('/'));
+                        let indicator = format!("🌐 {} ", host);
+                        recent_paths_set.insert(ssh_arg.clone()); // Track SSH URL for deduplication
+                        (ssh_arg.clone(), indicator, path.to_string(), ssh_arg)
                     } else {
-                        String::new()
+                        recent_paths_set.insert(path_str.clone());
+                        (path.to_string(), String::new(), path.to_string(), path_str)
                     };
 
                     output.add_item(AlfredItem {
-                        uid: path.to_string(),
+                        uid,
                         item_type: "file".to_string(),
                         title: format!("{}{}{}{}", remote_indicator, icon, name, timestamp_text),
-                        subtitle: path.to_string(),
-                        arg: path.to_string(),
+                        subtitle,
+                        arg,
                         autocomplete: name.to_string(),
                         icon: AlfredIcon {
                             icon_type: "fileicon".to_string(),
-                            path: path.to_string(),
+                            path: if is_remote {
+                                String::new()
+                            } else {
+                                path.to_string()
+                            },
                         },
                     });
                 }

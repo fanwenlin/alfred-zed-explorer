@@ -168,19 +168,20 @@ fn get_recent_projects_from_workspaces(conn: &Connection) -> Result<Vec<ZedRecen
         Ok((id, kind, host))
     })?;
 
-    for conn_result in remote_connections {
-        if let Ok((id, kind, host)) = conn_result {
-            remote_conn_map.insert(id, RemoteInfo {
+    for (id, kind, host) in remote_connections.flatten() {
+        remote_conn_map.insert(
+            id,
+            RemoteInfo {
                 connection_id: id,
                 kind,
                 host,
-            });
-        }
+            },
+        );
     }
 
     // Query the workspaces table
     let mut stmt = conn.prepare(
-        "SELECT paths, timestamp, remote_connection_id FROM workspaces ORDER BY timestamp DESC"
+        "SELECT paths, timestamp, remote_connection_id FROM workspaces ORDER BY timestamp DESC",
     )?;
 
     let projects = stmt.query_map([], |row| {
@@ -203,7 +204,8 @@ fn get_recent_projects_from_workspaces(conn: &Connection) -> Result<Vec<ZedRecen
         let (paths_str, timestamp, remote_connection_id) = project_result;
 
         // Get remote info if available
-        let remote_info = remote_connection_id.and_then(|conn_id| remote_conn_map.get(&conn_id).cloned());
+        let remote_info =
+            remote_connection_id.and_then(|conn_id| remote_conn_map.get(&conn_id).cloned());
 
         // Split paths by | and handle each path
         for path in paths_str.split('|') {
@@ -275,7 +277,11 @@ fn parse_recent_projects_json(json_str: &str) -> Result<Vec<ZedRecentProject>> {
                     let timestamp = obj.get("timestamp").and_then(|v| v.as_i64());
 
                     // KV store doesn't have remote info, so set it to None
-                    projects.push(ZedRecentProject { path, timestamp, remote_info: None });
+                    projects.push(ZedRecentProject {
+                        path,
+                        timestamp,
+                        remote_info: None,
+                    });
                 }
             }
         }
