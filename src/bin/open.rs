@@ -10,8 +10,9 @@ fn main() -> Result<()> {
         std::process::exit(1);
     }
 
-    // Check if directory exists
-    if !std::path::Path::new(&project_path).is_dir() {
+    // Check if directory exists (skip for remote SSH paths)
+    let is_remote = project_path.starts_with("ssh://");
+    if !is_remote && !std::path::Path::new(&project_path).is_dir() {
         eprintln!("Error: Directory does not exist: {}", project_path);
         std::process::exit(1);
     }
